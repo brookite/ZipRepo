@@ -1,5 +1,5 @@
 from pathlib import Path
-from settings import SettingsManager
+from settings import RepositorySettingsManager
 
 
 class Repository:
@@ -9,7 +9,7 @@ class Repository:
         self._initialize()
 
     def _initialize(self):
-        SettingsManager(self).load()
+        RepositorySettingsManager(self).load()
 
     @property
     def local_path(self) -> Path:
@@ -17,7 +17,7 @@ class Repository:
 
     @property
     def name(self):
-        pass
+        return self._local_path.name
 
     @property
     def config(self):
@@ -27,5 +27,5 @@ class Repository:
         self.config["version"] += 1
         return self._config["version"]
 
-    def add_external_storage(self, storage):
-        pass
+    def add_external_storage(self, name: str, storage: "ExternalStorage"):
+        self._config["storages"]["name"] = storage.path
