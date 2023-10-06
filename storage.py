@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from settings import StorageSettingsManager
 
@@ -18,3 +19,11 @@ class ExternalStorage:
     @property
     def name(self):
         return self._path.name
+
+    def find_repository(self, name):
+        for file in os.listdir(self.path):
+            file = Path(file)
+            if file.is_file() and file.match("*_v*.ziprepo"):
+                repo_name = str(file.name).split("_")[0]
+                if repo_name == name:
+                    return file

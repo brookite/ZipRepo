@@ -93,16 +93,13 @@ class PullManager:
     @staticmethod
     def _pull_storage(repo: Repository, storage_name: str):
         storage_path = repo.config["storages"].get(storage_name)
-        for file in os.listdir(storage_path):
-            file = Path(file)
-            if file.is_file() and file.match("*_v*.ziprepo"):
-                repo_name = str(file.name).split("_")[0]
-                if repo_name == repo.name:
-                    version = PullManager.extract_version(file)
-                    if version > repo.version:
-                        rmtree(repo.local_path)
-                        os.mkdir(repo.local_path)
-                        ZipManager.unpack(file, repo.local_path)
+        storage = ExternalStorage(storage_path)
+        if file := storage.find_repository(repo.name):
+            version = PullManager.extract_version(file)
+            if version > repo.version:
+                rmtree(repo.local_path)
+                os.mkdir(repo.local_path)
+                ZipManager.unpack(file, repo.local_path)
 
     @staticmethod
     def pull(repo: Repository, storage_name: str):
