@@ -1,6 +1,7 @@
 from pathlib import Path
 from settings import StorageSettingsManager
 
+
 class ExternalStorage:
     def __init__(self, path: Path):
         self._path = path

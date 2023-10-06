@@ -8,17 +8,23 @@ class RepositorySettingsManager:
     def save(self):
         file = self._repo.local_path / "ziprepo.json"
         with open(file, "w", encoding="utf-8") as fobj:
-            json.dump(self._repo.config, file)
+            json.dump(self._repo.config, fobj, indent=4)
 
     def load(self):
         config = self._repo.config
         file = self._repo.local_path / "ziprepo.json"
-        with open(file, "r", encoding="utf-8") as fobj:
-            loaded_config = json.load(file)
+        if file.exists():
+            with open(file, "r", encoding="utf-8") as fobj:
+                loaded_config = json.load(fobj)
+        else:
+            loaded_config = {}
         config.update(loaded_config)
         config.setdefault("type", "repo")
         config.setdefault("storages", {})
+        config.setdefault("exclude", [])
         config.setdefault("version", 0)
+        if not file.exists():
+            self.save()
 
 
 class StorageSettingsManager:
@@ -28,12 +34,17 @@ class StorageSettingsManager:
     def save(self):
         file = self._repo.path / "ziprepo.json"
         with open(file, "w", encoding="utf-8") as fobj:
-            json.dump(self._repo.config, file)
+            json.dump(self._repo.config, fobj)
 
     def load(self):
         file = self._repo.path / "ziprepo.json"
         config = self._repo.config
-        with open(file, "r", encoding="utf-8") as fobj:
-            loaded_config = json.load(file)
+        if file.exists():
+            with open(file, "r", encoding="utf-8") as fobj:
+                loaded_config = json.load(file)
+        else:
+            loaded_config = {}
         config.update(loaded_config)
-        config.setdefault("type", "repo")
+        config.setdefault("type", "storage")
+        if not file.exists():
+            self.save()

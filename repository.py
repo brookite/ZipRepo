@@ -20,6 +20,10 @@ class Repository:
         return self._local_path.name
 
     @property
+    def version(self):
+        return self._config["version"]
+
+    @property
     def config(self):
         return self._config
 
