@@ -21,12 +21,12 @@ def ext_add(name, path):
     repository = Repository(Path.cwd())
     if os.path.exists(path):
         if os.path.exists(os.path.join(path, "ziprepo.json")):
-            repository["config"]["storages"][name] = path
+            repository.config["storages"][name] = path
             RepositorySettingsManager(repository).save()
         else:
-            print("It's not storage path")
+            print("It's not storage path", file=sys.stderr)
     else:
-        print("Storage doesn't exist")
+        print("Storage doesn't exist", file=sys.stderr)
 
 
 def ext_remove(name):
@@ -37,11 +37,11 @@ def ext_remove(name):
 
 def ext_clone(source, repo_name):
     cur_path = Path.cwd()
-    storage = ExternalStorage(source)
+    storage = ExternalStorage(Path(source))
     if zip_path := storage.find_repository(repo_name):
         ZipManager.unpack(zip_path, cur_path / repo_name)
     else:
-        print("Repository doesn't exist in specified storage")
+        print("Repository doesn't exist in specified storage", file=sys.stderr)
 
 
 def push(storage_name):
@@ -52,13 +52,12 @@ def push(storage_name):
 
 def pull(storage_name):
     repository = Repository(Path.cwd())
-    storage_name = None if storage_name.lower() == "all" else storage_name
     PullManager.pull(repository, storage_name)
 
 
 COMMANDS = {
     "init": init,
-    "ext": {"add": ext_add, "remove": ext_remove, "clone": ext_clone},
+    "ext": {"add": ext_add, "remove": ext_remove, "clone": ext_clone, "init": ext_init},
     "push": push,
     "pull": pull,
 }
@@ -67,16 +66,16 @@ COMMANDS = {
 def main():
     arguments = sys.argv[1:]
     if len(arguments) == 0:
-        print("Input valid command sequence to ziprepo")
+        print("Input valid command sequence to ziprepo", file=sys.stderr)
     else:
         i = 0
         target = COMMANDS[arguments[i]]
         while not callable(target):
             i += 1
             if i == len(target):
-                print("Invalid command sequence")
+                print("Invalid command sequence", file=sys.stderr)
                 return
-            target = COMMANDS[arguments[i]]
+            target = target[arguments[i]]
         args = sys.argv[i + 2 :]
         target(*args)
 

@@ -20,10 +20,18 @@ class ExternalStorage:
     def name(self):
         return self._path.name
 
+    @property
+    def config(self):
+        return self._config
+
     def find_repository(self, name):
+        files = []
         for file in os.listdir(self.path):
-            file = Path(file)
+            file = self.path / Path(file)
             if file.is_file() and file.match("*_v*.ziprepo"):
                 repo_name = str(file.name).split("_")[0]
                 if repo_name == name:
-                    return file
+                    files.append(file)
+        files.sort()
+        if len(files):
+            return files[-1]

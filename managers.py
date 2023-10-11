@@ -3,12 +3,13 @@ import zipfile
 from pathlib import Path
 from typing import Optional
 
+from settings import RepositorySettingsManager
 from storage import ExternalStorage
 from repository import Repository
 import os
 from shutil import move, rmtree
 
-DEFAULT_EXCLUDE = [".git"]
+DEFAULT_EXCLUDE = [".git/*", ".git"]
 
 
 class ZipManager:
@@ -22,24 +23,34 @@ class ZipManager:
             compression=zipfile.ZIP_DEFLATED,
             compresslevel=9,
         ) as zip:
+            skip_dirs = []
             for root, dirs, files in os.walk(repo.local_path):
                 root = Path(root)
                 for dir in dirs:
-                    path = (root / dir).relative_to(repo.local_path)
-                    if path.name in DEFAULT_EXCLUDE:
-                        continue
-                    for exc in repo.config["exclude"]:
-                        if path.match(exc):
-                            continue
-                    zip.mkdir(str(path))
-                for file in files:
-                    path = root / file
-                    if path.name in DEFAULT_EXCLUDE:
-                        continue
-                    for exc in repo.config["exclude"]:
+                    skip_path = False
+                    path = root / dir
+                    for exc in DEFAULT_EXCLUDE + repo.config["exclude"]:
                         if path.relative_to(repo.local_path).match(exc):
-                            continue
-                    zip.write(path, path.relative_to(repo.local_path))
+                            skip_path = True
+                            skip_dirs.append(path)
+                    for skip_dir in skip_dirs:
+                        if skip_dir in path.parents:
+                            skip_path = True
+                    if not skip_path:
+                        zip.mkdir(str(path.relative_to(repo.local_path)))
+                for file in files:
+                    skip_path = False
+                    path = root / file
+                    if path.name == zipname:
+                        skip_path = True
+                    for skip_dir in skip_dirs:
+                        if skip_dir in path.parents:
+                            skip_path = True
+                    for exc in DEFAULT_EXCLUDE + repo.config["exclude"]:
+                        if path.relative_to(repo.local_path).match(exc):
+                            skip_path = True
+                    if not skip_path:
+                        zip.write(path, path.relative_to(repo.local_path))
         return filepath
 
     @staticmethod
@@ -71,6 +82,7 @@ class PushManager:
     @staticmethod
     def push(repo: Repository, storage_name: Optional[str] = None):
         repo.update_version()
+        RepositorySettingsManager(repo).save()
         if storage_name:
             storage_path = repo.config["storages"].get(storage_name)
             storage = ExternalStorage(Path(storage_path))
@@ -91,20 +103,14 @@ class PullManager:
         return jsonfile.get("version", 0)
 
     @staticmethod
-    def _pull_storage(repo: Repository, storage_name: str):
+    def pull(repo: Repository, storage_name: str):
         storage_path = repo.config["storages"].get(storage_name)
-        storage = ExternalStorage(storage_path)
+        storage = ExternalStorage(Path(storage_path))
         if file := storage.find_repository(repo.name):
             version = PullManager.extract_version(file)
+            print(version)
             if version > repo.version:
-                rmtree(repo.local_path)
-                os.mkdir(repo.local_path)
+                rmtree(repo.local_path, ignore_errors=True)
+                if not repo.local_path.exists():
+                    os.mkdir(repo.local_path)
                 ZipManager.unpack(file, repo.local_path)
-
-    @staticmethod
-    def pull(repo: Repository, storage_name: str):
-        if storage_name:
-            PullManager._pull_storage(repo, storage_name)
-        else:
-            for storage in repo.config["storages"]:
-                PullManager._pull_storage(repo, storage)
