@@ -60,7 +60,7 @@ COMMANDS = {
     "init": init,
     "ext": {"add": ext_add, "remove": ext_remove, "clone": ext_clone},
     "push": push,
-    "pull": pull
+    "pull": pull,
 }
 
 
@@ -77,6 +77,9 @@ def main():
                 print("Invalid command sequence")
                 return
             target = COMMANDS[arguments[i]]
-        target(*sys.argv[i + 1:])
+        args = sys.argv[i + 2 :]
+        target(*args)
 
 
+if __name__ == "__main__":
+    main()
