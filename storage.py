@@ -29,7 +29,7 @@ class ExternalStorage:
         for file in os.listdir(self.path):
             file = self.path / Path(file)
             if file.is_file() and file.match("*_v*.ziprepo"):
-                repo_name = str(file.name).split("_")[0]
+                repo_name = "_".join(str(file.name).split("_")[-2::-1][::-1])
                 if repo_name == name:
                     files.append(file)
         files.sort()
