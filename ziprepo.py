@@ -5,7 +5,7 @@ from managers import ZipManager, PushManager, PullManager
 from repository import Repository
 from pathlib import Path
 
-from settings import RepositorySettingsManager
+from settings import RepositorySettingsManager, GlobalSettingsManager
 from storage import ExternalStorage
 
 
@@ -55,11 +55,37 @@ def pull(storage_name):
     PullManager.pull(repository, storage_name)
 
 
+def add_global_storage_alias(name, path):
+    settings = GlobalSettingsManager()
+    settings.load()
+    settings.add_storage(name, path)
+    settings.save()
+
+
+def remove_global_storage_alias(name):
+    settings = GlobalSettingsManager()
+    settings.load()
+    settings.remove_storage(name)
+    settings.save()
+
+
+def help():
+    pass
+
+
 COMMANDS = {
     "init": init,
     "ext": {"add": ext_add, "remove": ext_remove, "clone": ext_clone, "init": ext_init},
+    "global": {
+        "storage": {
+            "add": add_global_storage_alias,
+            "remove": remove_global_storage_alias,
+        }
+    },
     "push": push,
     "pull": pull,
+    "help": help,
+    "--help": help,
 }
 
 
@@ -72,7 +98,7 @@ def main():
         target = COMMANDS[arguments[i]]
         while not callable(target):
             i += 1
-            if i == len(target):
+            if i == len(arguments):
                 print("Invalid command sequence", file=sys.stderr)
                 return
             target = target[arguments[i]]

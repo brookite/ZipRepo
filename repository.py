@@ -16,6 +16,10 @@ class Repository:
         return self._local_path
 
     @property
+    def path(self) -> Path:
+        return self._local_path
+
+    @property
     def name(self):
         return self._local_path.name
 

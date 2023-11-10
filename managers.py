@@ -3,13 +3,21 @@ import zipfile
 from pathlib import Path
 from typing import Optional
 
-from settings import RepositorySettingsManager
+from settings import RepositorySettingsManager, GlobalSettingsManager
 from storage import ExternalStorage
 from repository import Repository
 import os
 from shutil import move, rmtree
 
 DEFAULT_EXCLUDE = [".git/*", ".git"]
+
+
+class PushProcessError(Exception):
+    pass
+
+
+class PullProcessError(Exception):
+    pass
 
 
 class ZipManager:
@@ -85,13 +93,31 @@ class PushManager:
         RepositorySettingsManager(repo).save()
         if storage_name:
             storage_path = repo.config["storages"].get(storage_name)
+            if not storage_path:
+                settings = GlobalSettingsManager()
+                if not (storage_path := settings.get_alias(storage_name)):
+                    raise PushProcessError("Storage wasn't found")
             storage = ExternalStorage(Path(storage_path))
             file = ZipManager.pack(repo, repo.local_path)
+            if ff := storage.find_repository(repo.name):
+                version = PullManager.extract_version(ff)
+                if repo.version < version:
+                    raise PushProcessError(
+                        f"Detected newest version in storage {storage_path}. "
+                        "Please, save changes and pull before pushing"
+                    )
             ZipManager.move(file, storage)
         else:
             for storage_path in repo.config["storages"].values():
                 storage = ExternalStorage(Path(storage_path))
                 file = ZipManager.pack(repo, repo.local_path)
+                if ff := storage.find_repository(repo.name):
+                    version = PullManager.extract_version(ff)
+                    if repo.version < version:
+                        raise PushProcessError(
+                            f"Detected newest version in storage {storage_path}. "
+                            "Please, save changes and pull before pushing"
+                        )
                 ZipManager.move(file, storage)
 
 
@@ -108,7 +134,6 @@ class PullManager:
         storage = ExternalStorage(Path(storage_path))
         if file := storage.find_repository(repo.name):
             version = PullManager.extract_version(file)
-            print(version)
             if version > repo.version:
                 rmtree(repo.local_path, ignore_errors=True)
                 if not repo.local_path.exists():
