@@ -33,6 +33,7 @@ class GlobalSettingsManager(AbstractSettingsManager):
         self._source = GlobalSettingsManager.LocalSettings(
             {}, Path(os.path.expanduser("~"))
         )
+        self.load()
 
     def add_storage(self, name: str, path: str):
         self._source.config["aliases"][name] = path
@@ -47,7 +48,7 @@ class GlobalSettingsManager(AbstractSettingsManager):
         config.setdefault("aliases", {})
 
     def get_alias(self, storage_name):
-        return self._source.config.get("alias", {}).get(storage_name)
+        return self._source.config.get("aliases", {}).get(storage_name)
 
 
 class RepositorySettingsManager(AbstractSettingsManager):

@@ -131,6 +131,10 @@ class PullManager:
     @staticmethod
     def pull(repo: Repository, storage_name: str):
         storage_path = repo.config["storages"].get(storage_name)
+        if not storage_path:
+            settings = GlobalSettingsManager()
+            if not (storage_path := settings.get_alias(storage_name)):
+                raise PushProcessError("Storage wasn't found")
         storage = ExternalStorage(Path(storage_path))
         if file := storage.find_repository(repo.name):
             version = PullManager.extract_version(file)

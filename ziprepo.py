@@ -37,7 +37,10 @@ def ext_remove(name):
 
 def ext_clone(source, repo_name):
     cur_path = Path.cwd()
-    storage = ExternalStorage(Path(source))
+    settings = GlobalSettingsManager()
+    if not (storage_path := settings.get_alias(source)):
+        storage_path = source
+    storage = ExternalStorage(Path(storage_path))
     if zip_path := storage.find_repository(repo_name):
         ZipManager.unpack(zip_path, cur_path / repo_name)
     else:
