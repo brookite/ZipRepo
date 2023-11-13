@@ -73,7 +73,22 @@ def remove_global_storage_alias(name):
 
 
 def help():
-    pass
+    result = """
+ZipRepo - simple command-line version control system with syncing between remotes directories
+
+
+Commands:
+init - initialize a repository
+ext init - initialize a storage for repositories in remoted directories
+ext clone GLOBAL_STORAGE_NAME|STORAGE_PATH - clones repository to specified directory
+ext add STORAGE_NAME STORAGE_PATH - addes storage link to current repository
+ext remove STORAGE_NAME - removes storage link from current repository
+push STORAGE_NAME - sends a new version of repository to storage
+pull STORAGE_NAME - syncs to current repository last version in external storage
+global storage add STORAGE_ALIAS STORAGE_PATH - add external storage link to all repositories
+global storage remove STORAGE_ALIAS - removes storage alias from all repositories
+"""
+    print(result)
 
 
 COMMANDS = {
@@ -96,6 +111,7 @@ def main():
     arguments = sys.argv[1:]
     if len(arguments) == 0:
         print("Input valid command sequence to ziprepo", file=sys.stderr)
+        help()
     else:
         i = 0
         target = COMMANDS[arguments[i]]
