@@ -9,7 +9,7 @@ from repository import Repository
 import os
 from shutil import move, rmtree
 
-DEFAULT_EXCLUDE = [".git/*", ".git"]
+DEFAULT_EXCLUDE = [".git/"]
 
 
 class PushProcessError(Exception):
@@ -25,40 +25,57 @@ class ZipManager:
     def pack(repo: Repository, zip_path: Path) -> Path:
         zipname = f"{repo.name}_v{repo.version}.ziprepo"
         filepath = zip_path / zipname
+        excluded = DEFAULT_EXCLUDE + repo.config["exclude"]
         with zipfile.ZipFile(
             filepath,
             "w",
             compression=zipfile.ZIP_DEFLATED,
             compresslevel=9,
         ) as zip:
-            skip_dirs = []
+            ignored_root = None
             for root, dirs, files in os.walk(repo.local_path):
                 root = Path(root)
+
+                if ignored_root and root == ignored_root:
+                    continue
+                else:
+                    ignored_root = None
+
+                continue_flag = False
+                for exc in excluded:
+                    if (
+                        Path(exc) in root.relative_to(repo.local_path).parents
+                        or root.relative_to(repo.local_path).match(exc)
+                        or root.relative_to(repo.local_path) == Path(exc)
+                    ):
+                        ignored_root = root
+                        continue_flag = True
+                        break
+
+                if continue_flag:
+                    continue
+
                 for dir in dirs:
-                    skip_path = False
+                    continue_flag = False
                     path = root / dir
-                    for exc in DEFAULT_EXCLUDE + repo.config["exclude"]:
-                        if path.relative_to(repo.local_path).match(exc):
-                            skip_path = True
-                            skip_dirs.append(path)
-                    for skip_dir in skip_dirs:
-                        if skip_dir in path.parents:
-                            skip_path = True
-                    if not skip_path:
+                    local_excluded = []
+                    for exc in excluded:
+                        if (
+                            Path(exc) == Path(dir)
+                            or Path(exc) in path.relative_to(repo.local_path).parents
+                            or path.relative_to(repo.local_path).match(exc)
+                            or path.relative_to(repo.local_path) == Path(exc)
+                        ):
+                            continue_flag = True
+                            local_excluded.append(path)
+                    excluded.extend(local_excluded)
+                    if not continue_flag:
                         zip.mkdir(str(path.relative_to(repo.local_path)))
                 for file in files:
-                    skip_path = False
                     path = root / file
                     if path.name == zipname:
-                        skip_path = True
-                    for skip_dir in skip_dirs:
-                        if skip_dir in path.parents:
-                            skip_path = True
-                    for exc in DEFAULT_EXCLUDE + repo.config["exclude"]:
-                        if path.relative_to(repo.local_path).match(exc):
-                            skip_path = True
-                    if not skip_path:
-                        zip.write(path, path.relative_to(repo.local_path))
+                        continue
+                    zip.write(path, path.relative_to(repo.local_path))
         return filepath
 
     @staticmethod
