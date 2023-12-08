@@ -53,9 +53,13 @@ def push(storage_name):
     PushManager.push(repository, storage_name)
 
 
-def pull(storage_name):
+def pull(storage_name, preserve_old_keyword=None):
     repository = Repository(Path.cwd())
-    PullManager.pull(repository, storage_name)
+    PullManager.pull(
+        repository,
+        storage_name,
+        preserve_old_keyword == "--preserve-old",
+    )
 
 
 def add_global_storage_alias(name, path):
