@@ -1,13 +1,13 @@
 import json
 import zipfile
+import os
+from shutil import move, rmtree
 from pathlib import Path
 from typing import Optional
 
 from settings import RepositorySettingsManager, GlobalSettingsManager
 from storage import ExternalStorage
 from repository import Repository
-import os
-from shutil import move, rmtree
 
 DEFAULT_EXCLUDE = [".git/"]
 
@@ -61,21 +61,32 @@ class ZipManager:
                     local_excluded = []
                     for exc in excluded:
                         if (
-                            Path(exc) == Path(dir)
+                            Path(dir).match(exc)
                             or Path(exc) in path.relative_to(repo.local_path).parents
                             or path.relative_to(repo.local_path).match(exc)
                             or path.relative_to(repo.local_path) == Path(exc)
                         ):
                             continue_flag = True
-                            local_excluded.append(path)
+                            local_excluded.append(
+                                str(path.relative_to(repo.local_path))
+                            )
                     excluded.extend(local_excluded)
                     if not continue_flag:
                         zip.mkdir(str(path.relative_to(repo.local_path)))
                 for file in files:
+                    continue_flag = False
                     path = root / file
                     if path.name == zipname:
                         continue
-                    zip.write(path, path.relative_to(repo.local_path))
+                    for exc in excluded:
+                        if (
+                            Path(file).match(exc)
+                            or path.relative_to(repo.local_path).match(exc)
+                            or path.relative_to(repo.local_path) == Path(exc)
+                        ):
+                            continue_flag = True
+                    if not continue_flag:
+                        zip.write(path, path.relative_to(repo.local_path))
         return filepath
 
     @staticmethod
@@ -146,7 +157,7 @@ class PullManager:
         return jsonfile.get("version", 0)
 
     @staticmethod
-    def pull(repo: Repository, storage_name: str):
+    def pull(repo: Repository, storage_name: str, preserve_old: bool = False):
         storage_path = repo.config["storages"].get(storage_name)
         if not storage_path:
             settings = GlobalSettingsManager()
@@ -156,7 +167,10 @@ class PullManager:
         if file := storage.find_repository(repo.name):
             version = PullManager.extract_version(file)
             if version > repo.version:
-                rmtree(repo.local_path, ignore_errors=True)
+                if not preserve_old:
+                    rmtree(repo.local_path, ignore_errors=True)
                 if not repo.local_path.exists():
                     os.mkdir(repo.local_path)
                 ZipManager.unpack(file, repo.local_path)
+            else:
+                print("Already actual version")
