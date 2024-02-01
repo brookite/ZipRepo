@@ -30,8 +30,9 @@ class ExternalStorage:
             file = self.path / Path(file)
             if file.is_file() and file.match("*_v*.ziprepo"):
                 repo_name = "_".join(str(file.name).split("_")[-2::-1][::-1])
+                version = int(file.name.split("_v")[-1].replace(".ziprepo", ""))
                 if repo_name == name:
-                    files.append(file)
-        files.sort()
+                    files.append((version, file))
+        files.sort(key=lambda info: info[0])
         if len(files):
-            return files[-1]
+            return files[-1][1]
