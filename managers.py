@@ -9,7 +9,7 @@ from settings import RepositorySettingsManager, GlobalSettingsManager
 from storage import ExternalStorage
 from repository import Repository
 
-DEFAULT_EXCLUDE = [".git/"]
+DEFAULT_EXCLUDE = []
 
 
 class PushProcessError(Exception):
